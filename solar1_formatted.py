@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-import urllib
+from urllib import request
 import json
 import sys
 import math
@@ -22,7 +22,7 @@ KEY = ''  # Need to add your key here
 level = 0
 
 # number of days to go back into the history to compute deficit
-window = 21
+window = 1
 
 # Mapping of conditions to a level of cloud cover.  These can be adjusted
 # since they are all made up anyway
@@ -75,9 +75,10 @@ def printAttr(indata, name, uiname):
 def getForecastData():
     forecastURL = 'http://api.wunderground.com/api/' + KEY + '/forecast/q/' + COUNTRY + '/' + CITY + '.json'
 
-    response = urllib.urlopen(forecastURL).read()
+    response = request.urlopen(forecastURL).read()
+    encoding = request.urlopen(forecastURL).info().get_content_charset('utf-8')
 
-    data = json.loads(response)
+    data = json.loads(response.decode(encoding))
 
     print(CITY + ', ' + COUNTRY)
 
@@ -101,7 +102,7 @@ def getForecastData():
     return forecast
 
 
-# Returns a calculation of saturation vapour pressure based on temperature in degrees
+# Returns a calculation of saturation vapour pressure based on temperature in degrees C (in kPa?)
 def saturationVapourPressure(T):
     return 0.6108 * math.exp((17.27 * T) / (T + 237.3))
 
@@ -113,7 +114,7 @@ def getHistoricalData(forecast):
         today = date.today() - timedelta(day)
         datestring = today.strftime("%Y%m%d")
 
-        # response = urllib.urlopen(historyURL).read();
+        # response = request.urlopen(historyURL).read();
 
     try:
         with open("water/" + datestring) as f:
@@ -138,23 +139,25 @@ def getHistoricalData(forecast):
         data = json.load(open("data/" + datestring))
         source = "file " + datestring
     except:
-        historyURL = 'http://api.wunderground.com/api/' + KEY + '/history_' + datestring + '/q/Canada/Ottawa.json'
-        time.sleep(10)
-        response = urllib.urlopen(historyURL).read()
+        historyURL = 'http://api.wunderground.com/api/' + KEY + '/history_' + datestring + '/q/' + COUNTRY + '/' + CITY + '.json'
+        # time.sleep(10)
+        response = request.urlopen(historyURL).read()
+        encoding = request.urlopen(historyURL).info().get_content_charset('utf-8')
         cachefile = open("data/" + datestring, 'w')
-        cachefile.write(response)
+        cachefile.write(response.decode(encoding))
         cachefile.close()
-        data = json.loads(urllib.urlopen(historyURL).read())
+
+        data = json.loads(response.decode(encoding))
         source = historyURL
 
-    thedate = date(int(data['history']['dailysummary'][0]['date']['year']),
-                   int(data['history']['dailysummary'][0]['date']['mon']),
-                   int(data['history']['dailysummary'][0]['date']['mday']))
+    # thedate = date(int(data['history']['dailysummary'][0]['date']['year']),
+    #                int(data['history']['dailysummary'][0]['date']['mon']),
+    #                int(data['history']['dailysummary'][0]['date']['mday']))
 
-    dayOfYear = thedate.timetuple().tm_yday
+    # dayOfYear = thedate.timetuple().tm_yday
 
-    if (level > 0):
-        print('Data for ' + CITY + ', ' + COUNTRY + ' from ' + source + " on " + str(thedate))
+    # if (level > 0):
+    #     print('Data for ' + CITY + ', ' + COUNTRY + ' from ' + source + " on " + str(thedate))
 
     if (level > 2):
         printAttr(data['history']['dailysummary'][0], "maxtempm", "High temp")
